@@ -54,13 +54,17 @@ partial class PingHandler
                 return Failure.Create("An unsuccessful HTTP request");
             }
 
-            var containedMessage = input.ContainedMessage;
-            if (string.IsNullOrWhiteSpace(containedMessage) || httpResponseBody.Contains(containedMessage, StringComparison.InvariantCulture))
+            if (string.IsNullOrWhiteSpace(input.ContainedMessage))
             {
                 return Result.Success<Unit>(default);
             }
 
-            return Failure.Create("Response does not contain the required message");
+            if (httpResponseBody.Contains(input.ContainedMessage, StringComparison.InvariantCulture))
+            {
+                return Result.Success<Unit>(default);
+            }
+
+            return Failure.Create($"Response does not contain required message '{input.ContainedMessage}'");
         }
         catch (OperationCanceledException ex)
         {
