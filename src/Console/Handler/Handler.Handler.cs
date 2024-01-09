@@ -36,7 +36,7 @@ partial class PingHandler
             await Task.Delay(retryDelayInSeconds * 1000, cancellationToken).ConfigureAwait(false);
         }
 
-        return Failure.Create(HandlerFailureCode.Persistent, "All attempts were unsuccessful");
+        return Failure.Create(HandlerFailureCode.Transient, "All attempts were unsuccessful");
     }
 
     private async ValueTask<Result<Unit, Failure<Unit>>> PingAsync(PingIn input, CancellationToken cancellationToken)
