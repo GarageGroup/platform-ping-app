@@ -10,5 +10,6 @@ internal static class Application
         =>
         PrimaryHandler.UseStandardSocketsHttpHandler()
         .UseLogging("PingHandler")
+        .UseHttpApi()
         .Map<IHandler<PingIn, Unit>>(PingHandler.Resolve);
 }

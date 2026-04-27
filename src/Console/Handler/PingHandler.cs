@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Net.Http;
+using GarageGroup.Infra;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -7,13 +7,13 @@ namespace GarageGroup.Platform.Ping;
 
 internal sealed partial class PingHandler : IPingHandler
 {
-    public static PingHandler Resolve(IServiceProvider serviceProvider, HttpMessageHandler httpMessageHandler)
+    public static PingHandler Resolve(IServiceProvider serviceProvider, IHttpApi httpApi)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
-        ArgumentNullException.ThrowIfNull(httpMessageHandler);
+        ArgumentNullException.ThrowIfNull(httpApi);
 
         return new(
-            httpMessageHandler: httpMessageHandler,
+            httpApi: httpApi,
             logger: serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<PingHandler>());
     }
 
@@ -21,13 +21,13 @@ internal sealed partial class PingHandler : IPingHandler
 
     private const int DefaultMaxAttempts = 3;
 
-    private readonly HttpMessageHandler httpMessageHandler;
+    private readonly IHttpApi httpApi;
 
     private readonly ILogger logger;
 
-    private PingHandler(HttpMessageHandler httpMessageHandler, ILogger logger)
+    private PingHandler(IHttpApi httpApi, ILogger logger)
     {
-        this.httpMessageHandler = httpMessageHandler;
+        this.httpApi = httpApi;
         this.logger = logger;
     }
 }

@@ -1,17 +1,21 @@
 name: 'gg-ping-health-check'
-description: 'Ping web service health check'
+description: 'Checks the health status of a web service by pinging its health check endpoint.'
 inputs:
   health_check_url:
-    description: 'Web service health check URL'
+    description: 'The URL of the web service health check endpoint.'
     required: true
   contains:
-    description: 'Expected message'
+    description: 'The expected text or pattern that must be present in the health check response.'
     required: false
+  is_end_of_line_match:
+    description: 'Indicates whether the expected value should match only at the end of a line.'
+    required: false
+    default: 'false'
   retry_delay_in_seconds:
-    description: 'Retry delay in seconds'
+    description: 'The delay, in seconds, between retry attempts.'
     required: false
   max_attempts:
-    description: 'Max number of attempts'
+    description: 'The maximum number of health check attempts before failing.'
     required: false
 runs:
   using: 'composite'
@@ -20,6 +24,7 @@ runs:
         docker run --rm \
           -e In__HealthCheckUrl="${{ inputs.health_check_url }}" \
           -e In__ContainedMessage="${{ inputs.contains }}" \
+          -e In__IsEndOfLineMatch="${{ inputs.is_end_of_line_match }}" \
           -e In__RetryDelayInSeconds="${{ inputs.retry_delay_in_seconds }}" \
           -e In__MaxAttempts="${{ inputs.max_attempts }}" \
           ghcr.io/garagegroup/gg-ping-health-check:latest
