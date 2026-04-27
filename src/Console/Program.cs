@@ -3,9 +3,9 @@ using GarageGroup.Infra;
 
 namespace GarageGroup.Platform.Ping;
 
-public static class Program
+static class Program
 {
-    public static Task Main(string[] args)
+    static Task Main(string[] args)
         =>
-        Application.UsePingHandler().RunConsoleAsync("In", args);
+        Application.UsePingHandler().UseConsoleRunner("In", args).RunAsync();
 }

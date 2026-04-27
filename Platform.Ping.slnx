@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/.sln/">
+    <File Path="action.yml" />
+    <File Path="Dockerfile" />
+    <File Path="./.github/workflows/build.yml" />
+    <File Path="./.github/workflows/push.yml" />
+  </Folder>
+  <Project Path="src/Console/Console.csproj" />
+</Solution>

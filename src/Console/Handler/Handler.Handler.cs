@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using GarageGroup.Infra;
@@ -9,11 +9,12 @@ namespace GarageGroup.Platform.Ping;
 
 partial class PingHandler
 {
-    public async ValueTask<Result<Unit, Failure<HandlerFailureCode>>> HandleAsync(PingIn? input, CancellationToken cancellationToken)
+    public async ValueTask<Result<Unit, Failure<HandlerFailureCode>>> HandleAsync(
+        PingIn? input, CancellationToken cancellationToken)
     {
-        if (input?.HealthCheckUrl is null)
+        if (string.IsNullOrWhiteSpace(input?.HealthCheckUrl))
         {
-            return Failure.Create(HandlerFailureCode.Persistent, "HealthCheckUrl must be specified");
+            return Failure.Create(HandlerFailureCode.Persistent, "HealthCheckUrl must be specified.");
         }
 
         var retryDelayInSeconds = input.RetryDelayInSeconds > 0 ? input.RetryDelayInSeconds.Value : DefaultRetryDelayInSeconds;
@@ -21,8 +22,8 @@ partial class PingHandler
 
         for (var i = 0; i < maxAttempts; i++)
         {
-            logger.LogInformation("Attempt {attemmpt} of {maxAttempts}", i + 1, maxAttempts);
-            var result = await PingAsync(input, cancellationToken).ConfigureAwait(false);
+            logger.LogInformation("Attempt {attemmpt} of {maxAttempts}.", i + 1, maxAttempts);
+            var result = await InnerPingAsync(input, cancellationToken);
 
             if (result.IsSuccess)
             {
@@ -32,43 +33,51 @@ partial class PingHandler
             var failure = result.FailureOrThrow();
             logger.LogError(failure.SourceException, "{failureMessage}", failure.FailureMessage);
 
-            logger.LogInformation("Delay {delay}s", retryDelayInSeconds);
-            await Task.Delay(retryDelayInSeconds * 1000, cancellationToken).ConfigureAwait(false);
+            logger.LogInformation("Delay {delay}s.", retryDelayInSeconds);
+            await Task.Delay(retryDelayInSeconds * 1000, cancellationToken);
         }
 
-        return Failure.Create(HandlerFailureCode.Transient, "All attempts were unsuccessful");
+        return Failure.Create(HandlerFailureCode.Transient, "All attempts were unsuccessful.");
     }
 
-    private async ValueTask<Result<Unit, Failure<Unit>>> PingAsync(PingIn input, CancellationToken cancellationToken)
+    private ValueTask<Result<Unit, Failure<Unit>>> InnerPingAsync(PingIn input, CancellationToken cancellationToken)
+        =>
+        AsyncPipeline.Pipe(
+            input, cancellationToken)
+        .Pipe(
+            static @in => new HttpSendIn(HttpVerb.Get, @in.HealthCheckUrl.OrEmpty()))
+        .PipeValue(
+            httpApi.SendAsync)
+        .Map(
+            static success => success.Body.Content?.ToString(),
+            static failure => failure.ToStandardFailure("An unsuccessful HTTP request:").WithFailureCode<Unit>(default))
+        .Forward(
+            response => VerifyResponse(response.OrEmpty(), input));
+
+    private static Result<Unit, Failure<Unit>> VerifyResponse(string response, PingIn input)
     {
-        try
+        Console.WriteLine(response);
+        if (string.IsNullOrWhiteSpace(input.ContainedMessage))
         {
-            using var httpClient = new HttpClient(httpMessageHandler, disposeHandler: false);
-            using var httpResponse = await httpClient.GetAsync(input.HealthCheckUrl, cancellationToken).ConfigureAwait(false);
+            return Result.Success<Unit>(default);
+        }
 
-            var httpResponseBody = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            logger.LogInformation("{responseBody}", httpResponseBody);
-
-            if (httpResponse.IsSuccessStatusCode is false)
-            {
-                return Failure.Create("An unsuccessful HTTP request");
-            }
-
-            if (string.IsNullOrWhiteSpace(input.ContainedMessage))
+        if (input.IsEndOfLineMatch is not true)
+        {
+            if (response.Contains(input.ContainedMessage, StringComparison.InvariantCultureIgnoreCase))
             {
                 return Result.Success<Unit>(default);
             }
 
-            if (httpResponseBody.Contains(input.ContainedMessage, StringComparison.InvariantCulture))
-            {
-                return Result.Success<Unit>(default);
-            }
+            return Failure.Create($"Response does not contain required message '{input.ContainedMessage}'.");
+        }
 
-            return Failure.Create($"Response does not contain required message '{input.ContainedMessage}'");
-        }
-        catch (OperationCanceledException ex)
+        var pattern = Regex.Escape(input.ContainedMessage) + "$";
+        if (Regex.IsMatch(response, pattern, RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
-            return ex.ToFailure("An HTTP request was canceled");
+            return Result.Success<Unit>(default);
         }
+
+        return Failure.Create($"Response does not contain strict required message '{input.ContainedMessage}'.");
     }
 }
