@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,18 +46,28 @@ partial class PingHandler
         AsyncPipeline.Pipe(
             input, cancellationToken)
         .Pipe(
-            static @in => new HttpSendIn(HttpVerb.Get, @in.HealthCheckUrl.OrEmpty()))
+            static @in => new HttpSendIn(HttpVerb.Get, @in.HealthCheckUrl.OrEmpty())
+            {
+                Headers = @in.Headers.SplitToFlatArray(';', HeadersSplitOptions).Map(ParseHeaderValue)
+            })
         .PipeValue(
             httpApi.SendAsync)
         .Map(
-            static success => success.Body.Content?.ToString(),
+            static success => (success.Body.Content?.ToString()).OrEmpty(),
             static failure => failure.ToStandardFailure("An unsuccessful HTTP request:").WithFailureCode<Unit>(default))
+        .OnSuccess(
+            response => logger.LogInformation("{body}", response))
         .Forward(
-            response => VerifyResponse(response.OrEmpty(), input));
+            response => VerifyResponse(response, input));
+
+    private static KeyValuePair<string, string> ParseHeaderValue(string source)
+    {
+        var parts = source.Split(':', 2);
+        return new(parts[0], parts.Length > 1 ? parts[1] : string.Empty);
+    }
 
     private static Result<Unit, Failure<Unit>> VerifyResponse(string response, PingIn input)
     {
-        Console.WriteLine(response);
         if (string.IsNullOrWhiteSpace(input.ContainedMessage))
         {
             return Result.Success<Unit>(default);

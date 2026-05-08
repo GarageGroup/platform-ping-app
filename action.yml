@@ -4,6 +4,9 @@ inputs:
   health_check_url:
     description: 'The URL of the web service health check endpoint.'
     required: true
+  headers:
+    description: 'Optional HTTP headers to include in the health check request, provided as semicolon-separated key=value pairs, for example: x-functions-key:secret;Authorization:Bearer token.'
+    required: false
   contains:
     description: 'The expected text or pattern that must be present in the health check response.'
     required: false
@@ -23,6 +26,7 @@ runs:
     - run: |
         docker run --rm \
           -e In__HealthCheckUrl="${{ inputs.health_check_url }}" \
+          -e In__Headers="${{ inputs.headers }}" \
           -e In__ContainedMessage="${{ inputs.contains }}" \
           -e In__IsEndOfLineMatch="${{ inputs.is_end_of_line_match }}" \
           -e In__RetryDelayInSeconds="${{ inputs.retry_delay_in_seconds }}" \
