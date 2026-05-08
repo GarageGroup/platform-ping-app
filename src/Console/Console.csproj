@@ -20,6 +20,7 @@
     <PackageReference Include="EarlyFuncPack.Core.AsyncPipeline" Version="0.3.0" />
     <PackageReference Include="GarageGroup.Infra.Handler.Console" Version="0.14.1" />
     <PackageReference Include="GarageGroup.Infra.Http.Api" Version="1.0.0" />
+    <PackageReference Include="PrimeFuncPack.Core.FlatArray" Version="1.6.0" />
   </ItemGroup>
 
 </Project>

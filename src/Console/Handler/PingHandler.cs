@@ -14,12 +14,16 @@ internal sealed partial class PingHandler : IPingHandler
 
         return new(
             httpApi: httpApi,
-            logger: serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<PingHandler>());
+            logger: serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(PingHandler)));
     }
 
     private const int DefaultRetryDelayInSeconds = 5;
 
     private const int DefaultMaxAttempts = 3;
+
+    private const StringSplitOptions HeadersSplitOptions
+        =
+        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
 
     private readonly IHttpApi httpApi;
 

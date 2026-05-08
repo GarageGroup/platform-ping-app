@@ -9,7 +9,7 @@ internal static class Application
     internal static Dependency<IHandler<PingIn, Unit>> UsePingHandler()
         =>
         PrimaryHandler.UseStandardSocketsHttpHandler()
-        .UseLogging("PingHandler")
+        .UseLogging(nameof(PingHandler))
         .UseHttpApi()
         .Map<IHandler<PingIn, Unit>>(PingHandler.Resolve);
 }
